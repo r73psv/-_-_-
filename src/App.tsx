@@ -78,6 +78,7 @@ import { SUPPLIER_HALL_RULES, SuppliersAllocationBreakdown } from './suppliersCl
 import TestPlayground from './components/TestPlayground';
 import UserGuideModal from './components/UserGuideModal';
 import HallPerformanceDashboard from './components/HallPerformanceDashboard';
+import YclientsModal from './components/YclientsModal';
 import { downloadDocxReport } from './docxGenerator';
 
 export interface AggregatedArticleConfig {
@@ -391,6 +392,7 @@ export default function App() {
   const [serviceHallOverrides, setServiceHallOverrides] = useState<Record<string, HallName>>(() => loadSavedHallOverrides());
   const [showHallOverridesModal, setShowHallOverridesModal] = useState<boolean>(false);
   const [showUserGuideModal, setShowUserGuideModal] = useState<boolean>(false);
+  const [showYclientsModal, setShowYclientsModal] = useState<boolean>(false);
   const servicesFileInputRef = useRef<HTMLInputElement>(null);
 
   // Handlers for assigning services from "Прочие услуги" to a hall with persistence
@@ -470,6 +472,85 @@ export default function App() {
     setNotification({
       status: 'success',
       message: `Файл "${name}" (${recordsList.length} транзакций) успешно загружен и подготовлен к обработке. Нажмите кнопку «Запустить программу» ниже.`
+    });
+  };
+
+  // Handle data synchronized from Yclients
+  const handleYclientsDataLoaded = (data: {
+    records: RawRecord[];
+    services: RawServiceRecord[];
+    startDate: string;
+    endDate: string;
+    sourceTitle: string;
+    isDemo?: boolean;
+  }) => {
+    setShowYclientsModal(false);
+
+    let hasFinancial = false;
+    let hasServices = false;
+
+    // 1. Process Financial Records
+    if (data.records && data.records.length > 0) {
+      hasFinancial = true;
+      setStagedRecords(data.records);
+      setStagedFileName(data.sourceTitle);
+      setRawRecords(data.records);
+      setFileName(data.sourceTitle);
+      setIsProcessed(true);
+      setIsProcessing(false);
+      setProcessingStep(0);
+      setUserOverrides({});
+      setCategoryMappings({});
+      setTransactionMappings({});
+
+      // Set cutoff date to ~20th of the selected period month if appropriate
+      if (data.startDate) {
+        const parts = data.startDate.split('-');
+        if (parts.length === 3) {
+          const suggestedCutoff = `20.${parts[1]}.${parts[0]}`;
+          setCutoffDateStr(suggestedCutoff);
+        }
+      }
+    }
+
+    // 2. Process Services Records
+    if (data.services && data.services.length > 0) {
+      hasServices = true;
+      setServicesRecords(data.services);
+      const svcFileName = data.sourceTitle.includes('Финансовые')
+        ? data.sourceTitle.replace('Финансовые операции', 'Отчет по услугам')
+        : `${data.sourceTitle} (Услуги)`;
+      setServicesFileName(svcFileName);
+      setServicesStats({
+        totalRows: data.services.length,
+        validServiceRows: data.services.length,
+        cleanedFieldsCount: data.services.length * 6,
+        recognizedColumns: {
+          service: 'Услуга',
+          discount: 'Скидка',
+          points: 'Баллы',
+          subscriptions: 'Абонементы',
+          certificates: 'Сертификаты',
+          clientAccounts: 'Оплачено со счетов клиентов, ₽',
+          money: 'Оплачено деньгами, ₽'
+        }
+      });
+    }
+
+    // 3. Format Date for Notification
+    const formatRu = (iso: string) => {
+      const parts = iso.split('-');
+      return parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : iso;
+    };
+
+    const periodStr = `${formatRu(data.startDate)} — ${formatRu(data.endDate)}`;
+    const details: string[] = [];
+    if (hasFinancial) details.push(`${data.records.length} финансовых операций`);
+    if (hasServices) details.push(`${data.services.length} строк отчета по услугам`);
+
+    setNotification({
+      status: 'success',
+      message: `Синхронизация с Yclients успешно выполнена за период ${periodStr}! Загружено: ${details.join(', ')}. Отчеты сформированы и готовы к анализу.`
     });
   };
 
@@ -1186,6 +1267,19 @@ export default function App() {
               </button>
             )}
 
+            {/* Yclients Integration Button */}
+            <button
+              type="button"
+              onClick={() => setShowYclientsModal(true)}
+              className="px-3.5 py-2 text-xs font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100/80 border border-amber-250 transition-all rounded-xl cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              title="Интеграция с Yclients: получение финансовых операций и отчета по услугам за произвольный период"
+            >
+              <div className="w-4 h-4 rounded bg-amber-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                Y
+              </div>
+              <span>Yclients</span>
+            </button>
+
             {/* Detailed User Guide Button */}
             <button
               type="button"
@@ -1602,12 +1696,23 @@ export default function App() {
                       Минимальные требуемые колонки: «Сумма, Р», «Назначение», «Контрагент», «Комментарий», «Дата».
                     </p>
 
-                    <div className="mt-8 flex gap-3">
+                    <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-200 hover:bg-indigo-700 transition-colors cursor-pointer"
                       >
                         Выбрать файл на устройстве
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowYclientsModal(true)}
+                        className="px-5 py-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-250 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-2xs"
+                      >
+                        <div className="w-4 h-4 rounded bg-amber-600 text-white flex items-center justify-center font-bold text-[10px]">
+                          Y
+                        </div>
+                        <span>Загрузить из Yclients</span>
                       </button>
                     </div>
                   </div>
@@ -3274,6 +3379,17 @@ export default function App() {
             </div>
 
             <div className="flex gap-2 flex-wrap self-stretch md:self-auto justify-end">
+              <button
+                type="button"
+                onClick={() => setShowYclientsModal(true)}
+                className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                title="Синхронизировать услуги и финансы из Yclients за произвольный период"
+              >
+                <div className="w-4 h-4 rounded bg-slate-950 text-white flex items-center justify-center font-bold text-[10px]">
+                  Y
+                </div>
+                <span>Синхронизация Yclients</span>
+              </button>
               {servicesRecords.length === 0 && (
                 <button
                   onClick={loadDemoServicesData}
@@ -3337,11 +3453,21 @@ export default function App() {
                   <span>Выбрать файл по услугам</span>
                 </button>
                 <button
+                  type="button"
+                  onClick={() => setShowYclientsModal(true)}
+                  className="px-5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-250 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
+                >
+                  <div className="w-4 h-4 rounded bg-amber-600 text-white flex items-center justify-center font-bold text-[10px]">
+                    Y
+                  </div>
+                  <span>Загрузить из Yclients</span>
+                </button>
+                <button
                   onClick={loadDemoServicesData}
                   className="px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Sparkles className="w-4 h-4 text-amber-500" />
-                  <span>Загрузить Демо-данные услуг</span>
+                  <span>Загрузить Демо услуг</span>
                 </button>
               </div>
 
@@ -4958,6 +5084,13 @@ export default function App() {
         isOpen={showUserGuideModal}
         onClose={() => setShowUserGuideModal(false)}
         onOpenDemo={loadDemoData}
+      />
+      {/* Modal: Yclients Integration */}
+      <YclientsModal
+        isOpen={showYclientsModal}
+        onClose={() => setShowYclientsModal(false)}
+        onDataLoaded={handleYclientsDataLoaded}
+        initialCutoffDate={cutoffDateStr}
       />
       </main>
     </div>

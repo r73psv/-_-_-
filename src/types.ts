@@ -157,3 +157,42 @@ export interface ServicesPreprocessingStats {
     directRevenue?: string;
   };
 }
+
+export interface YclientsConfig {
+  companyId: string;
+  partnerToken: string;
+  userToken: string;
+  saveInBrowser?: boolean;
+}
+
+export interface YclientsDateRange {
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  presetLabel?: string;
+}
+
+export interface YclientsCompanyInfo {
+  id: number | string;
+  title: string;
+  city?: string;
+  timezone?: string;
+  currency?: string;
+}
+
+export interface YclientsSyncResponse {
+  success: boolean;
+  isDemo?: boolean;
+  message?: string;
+  warning?: string;
+  startDate?: string;
+  endDate?: string;
+  records: RawRecord[];
+  services: RawServiceRecord[];
+  companyInfo?: YclientsCompanyInfo;
+  summary?: {
+    totalTransactions: number;
+    totalServices: number;
+    totalRevenue: number;
+  };
+}
+
