@@ -17,7 +17,9 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
-  Database
+  Database,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -57,7 +59,9 @@ export default function YclientsModal({
 }: YclientsModalProps) {
   // Configuration
   const [config, setConfig] = useState<YclientsConfig>(() => loadYclientsConfig());
-  const [showConfigSettings, setShowConfigSettings] = useState(false);
+  const [showPartnerToken, setShowPartnerToken] = useState<boolean>(false);
+  const [showUserToken, setShowUserToken] = useState<boolean>(false);
+
   const [connectionStatus, setConnectionStatus] = useState<{
     tested: boolean;
     loading: boolean;
@@ -96,9 +100,6 @@ export default function YclientsModal({
     if (isOpen) {
       const saved = loadYclientsConfig();
       setConfig(saved);
-      if (!saved.companyId && !saved.partnerToken) {
-        setShowConfigSettings(true);
-      }
       setSyncError(null);
       setSyncSuccessResult(null);
     }
@@ -249,29 +250,29 @@ export default function YclientsModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.18, ease: 'easeOut' }}
-        className="relative w-full max-w-3xl my-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-3xl my-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-lg">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-lg">
               Y
             </div>
             <div>
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                 Интеграция с Yclients
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50">
-                  v1 / v2 API
+                  API v1 / v2
                 </span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Автоматическая загрузка финансовых операций и отчета по услугам за произвольный период
+                Загрузка финансовых операций и отчета по услугам напрямую из CRM за любой период
               </p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -348,12 +349,184 @@ export default function YclientsModal({
             </div>
           )}
 
-          {/* SECTION 1: ARBITRARY PERIOD SELECTION */}
+          {/* SECTION 1: YCLIENTS API CREDENTIALS (ALWAYS VISIBLE & PROMINENT) */}
+          <div className="border border-amber-200/80 dark:border-amber-800/60 bg-amber-50/20 dark:bg-amber-950/10 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                    1. Параметры доступа к API Yclients
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Введите Company ID и токены из личного кабинета Yclients
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowApiGuide(!showApiGuide)}
+                className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 flex items-center gap-1 cursor-pointer"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>Где взять ключи?</span>
+              </button>
+            </div>
+
+            {/* Inputs Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+              {/* Company ID */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Company ID (ID филиала) <span className="text-amber-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Например: 123456"
+                    value={config.companyId}
+                    onChange={(e) => setConfig({ ...config, companyId: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-mono shadow-xs"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Из ссылки yclients.com/timetable/<strong className="text-slate-600 dark:text-slate-300">123456</strong>
+                </span>
+              </div>
+
+              {/* Partner Token (Bearer) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Partner Token (Bearer токен)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPartnerToken ? 'text' : 'password'}
+                    placeholder="Токен партнера / разработчика"
+                    value={config.partnerToken}
+                    onChange={(e) => setConfig({ ...config, partnerToken: e.target.value })}
+                    className="w-full px-3 py-2 pr-9 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-mono shadow-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPartnerToken(!showPartnerToken)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                    title={showPartnerToken ? 'Скрыть токен' : 'Показать токен'}
+                  >
+                    {showPartnerToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Bearer токен интегратора
+                </span>
+              </div>
+
+              {/* User Token */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  User Token (Токен пользователя)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showUserToken ? 'text' : 'password'}
+                    placeholder="Токен учетной записи пользователя"
+                    value={config.userToken}
+                    onChange={(e) => setConfig({ ...config, userToken: e.target.value })}
+                    className="w-full px-3 py-2 pr-9 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-mono shadow-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowUserToken(!showUserToken)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                    title={showUserToken ? 'Скрыть токен' : 'Показать токен'}
+                  >
+                    {showUserToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Токен сотрудника с доступом к финансам
+                </span>
+              </div>
+            </div>
+
+            {/* Test Connection Button & Storage Checkbox */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-amber-200/50 dark:border-amber-800/40">
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 dark:text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={config.saveInBrowser ?? true}
+                  onChange={(e) => setConfig({ ...config, saveInBrowser: e.target.checked })}
+                  className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                />
+                <span>Запомнить ключи в браузере (не потребуется вводить повторно)</span>
+              </label>
+
+              <button
+                type="button"
+                disabled={connectionStatus.loading}
+                onClick={handleTestConnection}
+                className="px-3.5 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-250 dark:border-slate-700 rounded-xl font-semibold text-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-xs"
+              >
+                {connectionStatus.loading ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-500" />
+                    <span>Проверка связи...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Проверить подключение</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* API Guide Accordion */}
+            {showApiGuide && (
+              <div className="p-4 bg-white dark:bg-slate-800/90 rounded-xl border border-amber-300 dark:border-amber-700/60 text-xs text-slate-700 dark:text-slate-300 space-y-2">
+                <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Key className="w-4 h-4 text-amber-500" />
+                  Где найти Company ID, Partner Token и User Token в Yclients:
+                </p>
+                <ul className="space-y-1.5 pl-1 list-none text-slate-600 dark:text-slate-400">
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold text-amber-600">1.</span>
+                    <div>
+                      <strong>Company ID (ID филиала)</strong>: находится прямо в адресной строке вашего браузера при открытии журнала записи (например, <code className="font-mono bg-slate-100 dark:bg-slate-700 px-1 py-0.5 rounded text-amber-700 dark:text-amber-300">https://yclients.com/timetable/123456</code>, где <strong>123456</strong> — это ваш Company ID).
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold text-amber-600">2.</span>
+                    <div>
+                      <strong>User Token (Токен пользователя)</strong>: выдается в разделе <em>Настройки &gt; Пользователи &gt; [Выбрать сотрудника с правами бухгалтера или владельца]</em> в блоке доступа к API, либо генерируется при авторизации по логину/паролю.
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold text-amber-600">3.</span>
+                    <div>
+                      <strong>Partner Token (Токен партнера / Bearer)</strong>: токен приложения интегратора из личного кабинета разработчика Yclients API. Если вы используете интеграцию напрямую через токен пользователя, можно оставить пустым или указать оба токена.
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
+                    <span className="font-bold text-amber-600">💡</span>
+                    <div>
+                      <em>Быстрый тест без ключей</em>: нажмите внизу кнопку <strong>«Демо Yclients за выбранный период»</strong>, и система сформирует полный срез данных за любые выбранные даты.
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* SECTION 2: ARBITRARY PERIOD SELECTION */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                1. Произвольный период выгрузки
+                <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                2. Произвольный период выборки
               </label>
               <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 {daysCount} {daysCount === 1 ? 'день' : (daysCount >= 2 && daysCount <= 4 ? 'дня' : 'дней')} ({formatRuDateStr(startDate)} — {formatRuDateStr(endDate)})
@@ -369,7 +542,7 @@ export default function YclientsModal({
                     key={preset.id}
                     type="button"
                     onClick={() => handleSelectPreset(preset.id)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
                       isActive 
                         ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm font-semibold' 
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
@@ -392,7 +565,7 @@ export default function YclientsModal({
                     type="date"
                     value={startDate}
                     onChange={(e) => handleCustomStartDateChange(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-xs"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs shadow-xs"
                   />
                 </div>
               </div>
@@ -405,32 +578,32 @@ export default function YclientsModal({
                     type="date"
                     value={endDate}
                     onChange={(e) => handleCustomEndDateChange(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-xs"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs shadow-xs"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* SECTION 2: WHAT TO SYNC */}
-          <div className="space-y-3 pt-2">
+          {/* SECTION 3: WHAT TO SYNC */}
+          <div className="space-y-3 pt-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <Database className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              2. Выбор загружаемых отчетов
+              <Database className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              3. Выбор загружаемых отчетов
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Option A: Transactions */}
               <label className={`relative flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                 syncTransactions 
-                  ? 'border-amber-400 dark:border-amber-500/60 bg-amber-50/40 dark:bg-amber-950/20' 
+                  ? 'border-indigo-400 dark:border-indigo-500/60 bg-indigo-50/40 dark:bg-indigo-950/20' 
                   : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
               }`}>
                 <input
                   type="checkbox"
                   checked={syncTransactions}
                   onChange={(e) => setSyncTransactions(e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                  className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <div className="flex-1">
                   <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
@@ -446,18 +619,18 @@ export default function YclientsModal({
               {/* Option B: Services */}
               <label className={`relative flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                 syncServices 
-                  ? 'border-amber-400 dark:border-amber-500/60 bg-amber-50/40 dark:bg-amber-950/20' 
+                  ? 'border-indigo-400 dark:border-indigo-500/60 bg-indigo-50/40 dark:bg-indigo-950/20' 
                   : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
               }`}>
                 <input
                   type="checkbox"
                   checked={syncServices}
                   onChange={(e) => setSyncServices(e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                  className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <div className="flex-1">
                   <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <Scissors className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <Scissors className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     Отчет по услугам
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
@@ -467,148 +640,15 @@ export default function YclientsModal({
               </label>
             </div>
           </div>
-
-          {/* SECTION 3: YCLIENTS API CREDENTIALS */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowConfigSettings(!showConfigSettings)}
-              className="w-full flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-800/40 text-left hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Key className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <span className="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
-                  3. Параметры доступа к API Yclients
-                </span>
-                {config.companyId && (
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    (ID: {config.companyId})
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span>{showConfigSettings ? 'Свернуть' : 'Настроить ключи'}</span>
-                {showConfigSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </div>
-            </button>
-
-            {showConfigSettings && (
-              <div className="p-4 space-y-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      ID филиала (Company ID) <span className="text-amber-500">*</span>:
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Например: 123456"
-                      value={config.companyId}
-                      onChange={(e) => setConfig({ ...config, companyId: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      Токен партнера (Bearer):
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Partner Token"
-                      value={config.partnerToken}
-                      onChange={(e) => setConfig({ ...config, partnerToken: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      Токен пользователя (User Token):
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="User Token"
-                      value={config.userToken}
-                      onChange={(e) => setConfig({ ...config, userToken: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs">
-                  <label className="flex items-center gap-2 cursor-pointer text-slate-600 dark:text-slate-400">
-                    <input
-                      type="checkbox"
-                      checked={config.saveInBrowser ?? true}
-                      onChange={(e) => setConfig({ ...config, saveInBrowser: e.target.checked })}
-                      className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                    />
-                    <span>Сохранять ключи в памяти браузера для последующих выгрузок</span>
-                  </label>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowApiGuide(!showApiGuide)}
-                      className="text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-medium"
-                    >
-                      <HelpCircle className="w-3.5 h-3.5" />
-                      Где взять токены?
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={connectionStatus.loading}
-                      onClick={handleTestConnection}
-                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                    >
-                      {connectionStatus.loading ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-500" />
-                          <span>Проверка...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          <span>Проверить подключение</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* API Help Guide Accordion */}
-                {showApiGuide && (
-                  <div className="p-3.5 bg-amber-500/10 rounded-xl border border-amber-500/20 text-xs text-slate-700 dark:text-slate-300 space-y-2">
-                    <p className="font-semibold text-slate-900 dark:text-white">Инструкция по получению токенов в Yclients:</p>
-                    <ol className="list-decimal pl-4 space-y-1 text-slate-600 dark:text-slate-400">
-                      <li>
-                        <strong>Company ID (ID филиала)</strong>: находится в адресной строке вашего браузера при входе в филиал (например, <code className="font-mono bg-white dark:bg-slate-800 px-1 py-0.5 rounded">yclients.com/timetable/123456</code>, где <code className="font-mono text-amber-600">123456</code> — это ваш ID).
-                      </li>
-                      <li>
-                        <strong>User Token (Токен пользователя)</strong>: выдается в разделе <em>Настройки &gt; Пользователи &gt; [Выбрать сотрудника] &gt; Доступ к API</em> (или в запросе авторизации пользователя).
-                      </li>
-                      <li>
-                        <strong>Partner Token (Токен партнера)</strong>: получается в кабинете разработчика Yclients API при регистрации интеграции приложения.
-                      </li>
-                      <li>
-                        <em>Совет</em>: если у вас нет доступа разработчика, вы можете нажать кнопку ниже <strong>«Тестовый запуск с демо-данными Yclients»</strong> для мгновенной проверки отчетов.
-                      </li>
-                    </ol>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70 flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             disabled={isSyncing}
             onClick={() => handleExecuteSync(true)}
-            className="px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-all flex items-center gap-1.5"
+            className="px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
             title="Загрузить тестовый срез данных за выбранный период"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -620,7 +660,7 @@ export default function YclientsModal({
               type="button"
               disabled={isSyncing}
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-colors"
+              className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-colors cursor-pointer"
             >
               Отмена
             </button>
@@ -629,7 +669,7 @@ export default function YclientsModal({
               type="button"
               disabled={isSyncing}
               onClick={() => handleExecuteSync(false)}
-              className="px-5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSyncing ? (
                 <>
